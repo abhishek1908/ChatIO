@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>Chat IO</title>
+	<style type="text/css">
+		body{
+			background: #f9f9f9;
+		}
+
+		#container{
+			width:700px;
+			margin: 0 auto;
+		}
+
+		#chatWindow{
+			height: auto;
+		}
+
+		#mainWrapper{
+			display: none;
+		}
+
+		#chatWrapper{
+            loat:left;
+			border : 1px #ccc solid;
+			border-radius: 10px;
+			background: #f4f4f4;
+			padding: 10px;
+		}
+
+		#userWrapper{
+            float:left;
+			border : 1px #ccc solid;
+			border-radius: 10px;
+			background: #f4f4f4;
+			padding: 10px;
+			margin-left: 10px;
+			width:150px;
+			max-height: 200px;
+		}
+
+		#nameWrapper{
+			
+			float:left;
+			border : 1px #ccc solid;
+			border-radius: 10px;
+			background: #f4f4f4;
+			padding: 10px;
+			margin-left: 10px;
+		}
+
+		input{
+			height: 30px;
+			border: solid 1px #ccc;
+		}
+</style>
+</head>
+<body>
+   <div id = "container">
+    <div id="nameWrapper">
+         <h2>Chat IO</h2>
+         <p>Create UserName:</p>
+         <div id="error"></div>  
+         <form id="usernameForm">
+              <input size="35" type="text" id="username">
+              <input type="submit" value="submit">
+         </form>
+    </div>
+    <div id="mainWrapper">
+        <h2>Chat IO</h2>
+        <div id="chatWrapper">
+            <div id="chatWindow"></div>
+            <span id="notifyUser"></span>
+            <form id="messageForm">
+               <input size="35" type="text" id="message" placeholder="Say Something....">
+               <input type="submit" value="submit">
+            </form>
+        </div>
+
+        <div id="userWrapper">
+            <div id="users"></div>
+        </div><br><br>
+        <div>
+           <button id="signout">Signout</button>
+        </div>
+    </div>
+   </div>
+
+   <script src="http://code.jquery.com/jquery-latest.min.js"></script>
+   <script src="/socket.io/socket.io.js"></script>
+   <script>
+   	   $(document).ready(function(){
+           var socket = io.connect();
+           var $messageForm = $('#messageForm');
+           var $message = $('#message');
+           var $chat = $('#chatWindow');
+           var $usernameForm = $('#usernameForm');
+           var $users = $('#users');
+           var $username = $('#username');
+           var $error = $('#error');
+           var $buttonOut = $('#signout');
+
+           $usernameForm.submit(function(e){
+              e.preventDefault();
+              console.log('User added');
+              socket.emit('new user',$username.val(),function(data){
+                    if(data){
+                        $('#nameWrapper').hide();
+                        $('#mainWrapper').show();
+                        console.log('System verified');
+                        socket.emit('join user','System','<b>'+$username.val()+'</b> has joined the discussion');
+                    }else{
+                      $error.html('Username is already exists');
+                    }
+              });
+           });
+
+           socket.on('usernames',function(data){
+                var html = '';
+                for(i = 0;i< data.length;i++){
+                	html+= data[i] + '<br>';
+                }
+                $users.html(html);
+           });
+
+           $messageForm.submit(function(e){
+                e.preventDefault();
+                console.log('Message Submitted');
+                var color = 'blue';
+                socket.emit('send message',$message.val(),function(data){
+                     $chat.append('<p style="color:' + color + '">' + data+ '</p>');
+                });
+                $message.val('');
+           });
+           
+           socket.on('system message',function(data){
+               $chat.append('<strong>'+data.user+'</strong>'+': '+data.msg+'<br>');
+           })
+
+           socket.on('new message',function(data){
+               var color = ($username.val() == data.user) ? 'green' : 'red' ;
+               var userr = ($username.val() == data.user) ? 'Me' : data.user;
+           	   $chat.append('<p style="color:' + color + '">' + '<b>'+ userr + '</b>: ' + data.msg + '</p>');
+           });
+           
+           socket.on('whispher',function(data){
+               var color = 'gray';
+               $chat.append('<p style="color:' + color + '">' + '<b>'+ data.user + '</b>: ' + data.msg + '</p>');
+           });
+            
+           $buttonOut.click(function(e){
+               e.preventDefault();
+               socket.emit('join user','System','<b>'+$username.val()+'</b> has moved out the discussion');
+               socket.emit('disconnect user',$username.val());
+               console.log('SignOut..'+$username.val());
+           });
+           
+   	   });
+   </script>           
+</body>
+
+</html>
